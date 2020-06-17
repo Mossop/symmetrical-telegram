@@ -1,0 +1,28 @@
+#! /bin/bash
+
+PLATFORM="$1"
+VERSION="$2"
+TARGET="extracts/$PLATFORM/$VERSION"
+
+if [ -d "$TARGET" ]; then
+  exit
+fi
+
+mkdir -p "$TARGET"
+
+SOURCE=`ls releases/${VERSION}/${PLATFORM}/*`
+
+if [ "${SOURCE: -4}" == ".exe" ]; then
+  echo "Extracting Windows installer ${VERSION} from ${SOURCE}..." >/dev/stderr
+  7z x "-o${TARGET}" "${SOURCE}" 'core/*' >/dev/null
+  mv "${TARGET}/core"/* "${TARGET}"
+  rmdir "${TARGET}/core"
+elif [ "${SOURCE: -4}" == ".dmg" ]; then
+  echo "Extracting macOS DMG ${VERSION} from ${SOURCE}..." >/dev/stderr
+  7z x "-o${TARGET}" "${SOURCE}" Firefox/*.app >/dev/null
+  mv "${TARGET}"/Firefox/*/Contents "${TARGET}"
+  rm -rf "${TARGET}/Firefox"
+else
+  echo "Extracting Linux tar ${VERSION} from ${SOURCE}..." >/dev/stderr
+  tar -xf "${SOURCE}" --strip-components=1 --directory="${TARGET}"
+fi

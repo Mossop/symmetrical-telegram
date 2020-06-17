@@ -1,0 +1,21 @@
+#! /bin/bash
+
+VERSION=$1
+rm -rf ftp.mozilla.org/pub/firefox/releases/${VERSION}
+rm -rf updates/${VERSION}
+
+function do_download() {
+  PLATFORM=$1
+  wget -q -r -A .partial.mar --no-parent \
+    "http://ftp.mozilla.org/pub/firefox/releases/${VERSION}/update/${PLATFORM}/en-US/"
+  mkdir -p updates/${VERSION}/${PLATFORM}
+  mv ftp.mozilla.org/pub/firefox/releases/${VERSION}/update/${PLATFORM}/en-US/*.partial.mar updates/${VERSION}/${PLATFORM}
+}
+
+do_download win64
+do_download win32
+do_download linux-x86_64
+do_download linux-i686
+do_download mac
+
+rm -rf ftp.mozilla.org/pub/firefox/releases/${VERSION}

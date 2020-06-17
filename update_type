@@ -1,0 +1,27 @@
+#! /bin/bash
+
+OLDVERSION="$1"
+NEWVERSION="$2"
+
+OLDMAJOR=`echo $OLDVERSION | cut -d'.' -f 1`
+NEWMAJOR=`echo $NEWVERSION | cut -d'.' -f 1`
+
+if [ "$OLDMAJOR" -ne "$NEWMAJOR" ]; then
+  echo "major"
+  exit
+fi
+
+if echo $OLDVERSION $NEWVERSION | grep -q b -; then
+  echo "beta"
+  exit
+fi
+
+OLDMINOR=`echo $OLDVERSION | cut -d'.' -f 2`
+NEWMINOR=`echo $NEWVERSION | cut -d'.' -f 2`
+
+if [ "$OLDMINOR" -ne "$NEWMINOR" ]; then
+  echo "esr"
+  exit
+fi
+
+echo "minor"

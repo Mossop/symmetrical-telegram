@@ -1,0 +1,14 @@
+#! /bin/bash
+
+PLATFORM=$1
+VERSION=$2
+
+mkdir -p results
+
+for old_version in `./list_update_versions $PLATFORM $VERSION`
+do
+  type=`./update_type $old_version $VERSION`
+  if [ "$type" != "beta" ]; then
+    echo $PLATFORM $old_version $VERSION
+  fi
+done

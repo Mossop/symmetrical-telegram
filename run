@@ -1,0 +1,17 @@
+#! /bin/bash
+
+function list_versions() {
+  PLATFORM=$1
+
+  cat data/versions | grep -v b | xargs -n 1 ./build_version_patch_list $PLATFORM | sort | uniq
+}
+
+function list_all() {
+  list_versions win64
+  list_versions mac
+  list_versions linux-x86_64
+  list_versions win32
+  list_versions linux-i686
+}
+
+list_all | xargs -L 1 -P 30 ./build_patches -q
