@@ -1,0 +1,96 @@
+#! /bin/bash
+
+XZ86="xz --decompress"
+BSPATCH="./mbsdiff/mbspatch"
+
+function do_extract() {
+  PLATFORM=$1
+  VERSION=$2
+
+  DIR=extracts/$PLATFORM/$VERSION
+  echo $DIR
+
+  if [ -d $DIR ]; then
+    return
+  fi
+
+  ./extract $PLATFORM $VERSION
+}
+
+INFO="/dev/stdout"
+NOISY="/dev/stdout"
+PLATFORM=""
+
+while [ "$PLATFORM" == "" ]; do
+  case $1 in
+    -q )  NOISY="/dev/null"
+          ;;
+    -s )  NOISY="/dev/null"
+          INFO="/dev/null"
+          ;;
+    * )   PLATFORM=$1
+          ;;
+  esac
+  shift
+done
+
+OLDVERSION=$1
+NEWVERSION=$2
+PATCH="patches/bsdiff/$PLATFORM/$OLDVERSION-$NEWVERSION"
+TARGET="applied/bsdiff/$PLATFORM/$OLDVERSION-$NEWVERSION"
+
+if [ ! -d "$PATCH" ]; then
+  echo "No patch directory found."
+  exit
+fi
+
+set -e
+
+OLDDIR=`do_extract $PLATFORM $OLDVERSION`
+
+for new_file in `cd $PATCH && find -type f`
+do
+  path=`echo "$new_file" | cut -c3-`
+  base=`dirname $path`
+  mkdir -p $TARGET/$base
+
+  echo $path >$INFO
+
+  tempfile=`mktemp`
+
+  source_file=$OLDDIR/$path
+  patch_file=$PATCH/$path
+  target_file=$TARGET/$path
+
+  if [ "${source_file:(-3)}" == ".xz" ]; then
+    echo "  xz decompress" >$NOISY
+    $XZ86 --stdout "$patch_file" >$tempfile
+    source_file=${source_file%.xz}
+    target_file=${target_file%.xz}
+    patch_file=$tempfile
+  fi
+
+  if [ "${source_file:(-7)}" == ".bsdiff" ]; then
+    echo "  apply bspatch" >$NOISY
+    source_file=${source_file%.bsdiff}
+    target_file=${target_file%.bsdiff}
+    $BSPATCH $source_file $patch_file $target_file > /dev/null 2> /dev/null
+  else
+    echo "  copying" >$NOISY
+    cp $source_file $target_file
+  fi
+
+  rm -f $tempfile
+done
+
+for new_file in `cd $OLDDIR && find -type f`
+do
+  path=`echo "$new_file" | cut -c3-`
+  base=`dirname $path`
+  mkdir -p $TARGET/$base
+  if [ ! -f "$TARGET/$path" ]; then
+    echo $path >$INFO
+    echo "  copying" >$NOISY
+    cp $OLDDIR/$path $TARGET/$path
+  fi
+done

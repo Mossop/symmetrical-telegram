@@ -1,0 +1,100 @@
+#! /bin/bash
+
+XZ="xz --compress --lzma2 --format=xz --check=crc64"
+XZ86="xz --compress --x86 --lzma2 --format=xz --check=crc64"
+MBSDIFF="./mbsdiff/mbsdiff"
+ZUCCHINI="./zucchini/zucchini -gen"
+
+function do_extract() {
+  PLATFORM=$1
+  VERSION=$2
+
+  DIR=extracts/$PLATFORM/$VERSION
+  echo $DIR
+
+  if [ -d $DIR ]; then
+    return
+  fi
+
+  ./extract $PLATFORM $VERSION
+}
+
+INFO="/dev/stdout"
+NOISY="/dev/stdout"
+PLATFORM=""
+
+while [ "$PLATFORM" == "" ]; do
+  case $1 in
+    -q )  NOISY="/dev/null"
+          ;;
+    -s )  NOISY="/dev/null"
+          INFO="/dev/null"
+          ;;
+    * )   PLATFORM=$1
+          ;;
+  esac
+  shift
+done
+
+OLDVERSION=$1
+NEWVERSION=$2
+TARGET="patches/bsdiff/$PLATFORM/$OLDVERSION-$NEWVERSION"
+
+if [ -d "$TARGET" ]; then
+  exit
+fi
+
+set -e
+
+OLDDIR=`do_extract $PLATFORM $OLDVERSION`
+NEWDIR=`do_extract $PLATFORM $NEWVERSION`
+
+for new_file in `cd $NEWDIR && find -type f`
+do
+  path=`echo "$new_file" | cut -c3-`
+  base=`dirname $path`
+  mkdir -p $TARGET/$base
+  if ! test -f "$OLDDIR/$path" || ! diff -q $OLDDIR/$path $NEWDIR/$path >/dev/null; then
+    echo $path > $INFO
+
+    cp "$NEWDIR/$path" "$TARGET/$path"
+    BESTFILE="$TARGET/$path"
+    BESTSIZE=`cat $BESTFILE | wc -c`
+
+    SIZE=`$XZ86 --stdout $NEWDIR/$path | tee "$TARGET/${path}.xz" | wc -c`
+    if (( SIZE < BESTSIZE )); then
+      rm $BESTFILE
+      BESTFILE=$TARGET/${path}.xz
+      BESTSIZE=$SIZE
+    else
+      rm "$TARGET/${path}.xz"
+    fi
+
+    if [ -f "$OLDDIR/$path" ]; then
+      PATCH=`mktemp`
+      echo "  bsdiff..." > $NOISY
+      $MBSDIFF "$OLDDIR/$path" "$NEWDIR/$path" "$TARGET/${path}.bsdiff" > /dev/null
+
+      ZSIZE=`cat "$TARGET/${path}.bsdiff" | wc -c`
+      XSIZE=`$XZ86 --stdout "$TARGET/${path}.bsdiff" | tee "$TARGET/${path}.bsdiff.xz" | wc -c`
+
+      if (( XSIZE < BESTSIZE )); then
+        rm $BESTFILE
+        BESTFILE="$TARGET/${path}.bsdiff.xz"
+        BESTSIZE=$XSIZE
+      else
+        rm "$TARGET/${path}.bsdiff.xz"
+      fi
+
+      if (( ZSIZE < BESTSIZE )); then
+        rm $BESTFILE
+        BESTFILE="$TARGET/${path}.bsdiff"
+        BESTSIZE=$ZSIZE
+      else
+        rm "$TARGET/${path}.bsdiff"
+      fi
+
+      echo "Best choice is $BESTFILE" > $NOISY
+    fi
+  fi
+done
