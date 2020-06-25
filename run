@@ -14,4 +14,4 @@ function list_all() {
   list_versions linux-i686
 }
 
-list_all | xargs -L 1 -P 30 ./build_patches -q
+list_all | xargs -L 1 -P 30 ./build_update_json -q
