@@ -104,11 +104,11 @@ do
 
       echo "  mbsdiff..." > $NOISY
       $MBSDIFF "$OLDDIR/$path" "$NEWDIR/$path" "$PATCH" > /dev/null
-      get_sizes mbsdiff $PATCH 0
+      get_sizes bsdiff $PATCH 0
       rm $PATCH
     fi
 
-    get_sizes original $NEWDIR/$path 1
+    get_sizes straight $NEWDIR/$path 1
     echo -e "      }" >> $TARGET
   fi
 done

@@ -72,6 +72,12 @@ async function parseFile(filename) {
 
       for (let [kind, sizes] of Object.entries(file.sizes)) {
         try {
+          if (kind == "original") {
+            kind = "straight";
+          } else if (kind == "mbsdiff") {
+            kind = "bsdiff";
+          }
+
           await trx.into("Patch").insert({
             file: fileId,
             type: kind == "original" ? "straight" : kind,
