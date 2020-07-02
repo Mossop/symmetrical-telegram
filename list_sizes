@@ -1,0 +1,17 @@
+#! /bin/bash
+
+function display_sizes() {
+  PLATFORM=$1
+  VERSION=$2
+
+  PATCH_SIZE=`curl -L -I -s http://ftp.mozilla.org/pub/firefox/releases/${VERSION}/update/${PLATFORM}/en-US/firefox-${VERSION}.complete.mar | grep Content-Length | sed -E -e 's/Content-Length: //'`
+  INSTALLER_SIZE=`cat releases/${VERSION}/${PLATFORM}/firefox.exe | wc -c`
+  echo $PLATFORM,$VERSION,$INSTALLER_SIZE,$PATCH_SIZE
+}
+
+echo "Platform,Version,Installer size,Patch size"
+for version in `cat data/versions | grep -v b`
+do
+  display_sizes win32 $version
+  display_sizes win64 $version
+done
